@@ -48,6 +48,15 @@ def get_data(fname):
         raise Exception()
     return x,xbhw,y,e
 
+def get_data_dict(fname):
+    wv, wv_bin_hw, rprs2, rprs2_err = get_data(fname)
+    tmp = {}
+    tmp['wv'] = wv
+    tmp['wv_bin_hw'] = wv_bin_hw
+    tmp['rprs2'] = rprs2
+    tmp['rprs2_err'] = rprs2_err
+    return tmp
+
 def rebin_picaso_to_data(wv_model, flux_model, wv_data, wv_data_bin_halfwidth):
     "Rebins picaso model output to data."
     wv = wv_model.copy()
