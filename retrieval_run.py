@@ -74,8 +74,9 @@ if not os.path.isdir(out_dir):
 #6) Ultranest kwargs (fairly standard you should not need to change these)
 multi_kwargs = {'resume':True,#'resume-similar',
                 'warmstart_max_tau':-1,#0.7, #only used for resume-similar (small changes in likelihood. 0=very conservative, 1=very negligent) 
-                'n_live_points':'50*nparam',
-                'max_ncalls':None}
+                'n_live_points':'200*nparam',
+                'max_ncalls':None,
+                'dlogz': 0.01}
        
 ##################### REST SHOULD NOT NEED TO BE EDITED #####################
 for ir, retrieval_type in enumerate(models_types):
@@ -101,7 +102,8 @@ for ir, retrieval_type in enumerate(models_types):
         'nparams': Nparam, 
         'params':params, 
         'n_live_points': multi_kwargs['n_live_points'], 
-        'max_ncalls':multi_kwargs['max_ncalls']
+        'max_ncalls':multi_kwargs['max_ncalls'],
+        'dlogz':multi_kwargs['dlogz']
     } , open(f'{out_dir}/{tag}_{retrieval_type}.json','w'))
     
     #create a different directory for each run
@@ -118,7 +120,7 @@ for ir, retrieval_type in enumerate(models_types):
                     log_dir=path, resume=multi_kwargs['resume'], 
                     warmstart_max_tau=multi_kwargs['warmstart_max_tau'])
     
-    results = sampler.run(min_num_live_points=multi_kwargs['n_live_points'], max_ncalls=multi_kwargs['max_ncalls'])
+    results = sampler.run(min_num_live_points=multi_kwargs['n_live_points'], max_ncalls=multi_kwargs['max_ncalls'], dlogz=multi_kwargs['dlogz'])
     
     #dump results of pick too in case you want it for later (ultranest though will save what you need)
     pickle.dump(results, open(f'{out_dir}/{tag}_{retrieval_type}.pk','wb'))
