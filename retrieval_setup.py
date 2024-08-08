@@ -47,6 +47,11 @@ PICASO_OPAS, PICASO_PLAN = create_picaso()
 METALLICITY_CALCULATOR = utils.MetalicityCalculator()
 PLANET_TEQ = planets.TOI562_01.Teq
 
+def log10x_to_mix(log10x):
+        x = 10.0**log10x
+        mix = x/np.sum(x)
+        return mix
+
 class param_set: 
     """
     This sets up what your free parameters are in each model you want to test
@@ -55,6 +60,8 @@ class param_set:
     gauss_free_step_line = 'lam0,sig,Amp,cst_nrs1,cst_nrs2'
     mh_cld='logmh,cldp,cst_nrs1,cst_nrs2'
     mh_cld_logf='logmh,cldp,cst_nrs1,cst_nrs2,logf'
+    h2oh2_cld='log10xh2,log10xh2o,cldp,cst_nrs1,cst_nrs2'
+    h2oh2_cld_logf='log10xh2,log10xh2o,cldp,cst_nrs1,cst_nrs2,logf'
 
 class model_set: 
     """
@@ -120,6 +127,50 @@ class model_set:
         return biny
     
     mh_cld_logf = mh_cld
+
+    def h2oh2_cld(cube, data): 
+        log10xH2, log10xH2O, log_cld_top, cst_nr1, cst_nr2 = cube[0], cube[1], cube[2], cube[3], cube[4]
+
+        # PICASO and chemisty
+        opas = PICASO_OPAS
+        plan = PICASO_PLAN
+
+        # Compute mixing ratios from input x values
+        mix = log10x_to_mix(np.array([log10xH2, log10xH2O]))
+        f_H2 = mix[0]
+        f_H2O = mix[1]
+
+        # Compute a temperature profile
+        df = plan.guillot_pt(PLANET_TEQ, T_int=0.0)
+        P = df['pressure'].to_numpy()
+
+        # Add chemistry
+        df['H2'] = np.ones(P.shape[0])*f_H2
+        df['H2O'] = np.ones(P.shape[0])*f_H2O
+        plan.atmosphere(df=df)
+
+        # Add a cloud
+        cloud_bottom = np.log10(P[-1])
+        log_dp = cloud_bottom - log_cld_top
+        plan.clouds(g0=[0.9], w0=[0.9], opd=[10], p=[cloud_bottom], dp=[log_dp])
+
+        # Run picaso
+        df_picaso = plan.spectrum(opas, calculation='transmission', full_output=True)
+        x, y = df_picaso['wavenumber'], df_picaso['transit_depth']
+        wno, model = jdi.mean_regrid(df_picaso['wavenumber'], df_picaso['transit_depth'] , R=1000)
+        wv_model = 1e4/wno[::-1].copy()
+        rprs2_model = model[::-1].copy()
+
+        # Rebin picaso to data
+        _, biny = utils.rebin_picaso_to_data(wv_model, rprs2_model, data['wv'], data['wv_bin_hw'])
+
+        # Add offsets
+        biny[data['wv']<3.78] += cst_nr1
+        biny[data['wv']>=3.78] += cst_nr2
+        
+        return biny
+    
+    h2oh2_cld_logf = h2oh2_cld
 
 class prior_set: 
     """
@@ -191,4 +242,51 @@ class prior_set:
         minn = -7
         maxx = -3
         params[4] =  minn + (maxx-minn)*params[4]        
+        return params
+    
+    def h2oh2_cld(cube):
+        params = cube.copy()
+        min_log10x = -5
+        max_log10x = 0
+
+        # H2
+        params[0] = min_log10x + (max_log10x-min_log10x)*params[0]
+
+        # H2O
+        params[1] = min_log10x + (max_log10x-min_log10x)*params[1]
+
+        min_cldtop = -5
+        max_cldtop = 1.0
+        params[2] = min_cldtop + (max_cldtop-min_cldtop)*params[2]
+
+        min_offset = -1200e-6
+        max_offset = +1200e-6
+        params[3] = min_offset + (max_offset-min_offset)*params[3]
+        params[4] = min_offset + (max_offset-min_offset)*params[4]
+        return params
+    
+    def h2oh2_cld_logf(cube):
+        params = cube.copy()
+        min_log10x = -5
+        max_log10x = 0
+
+        # H2
+        params[0] = min_log10x + (max_log10x-min_log10x)*params[0]
+
+        # H2O
+        params[1] = min_log10x + (max_log10x-min_log10x)*params[1]
+
+        min_cldtop = -5
+        max_cldtop = 1.0
+        params[2] = min_cldtop + (max_cldtop-min_cldtop)*params[2]
+
+        min_offset = -1200e-6
+        max_offset = +1200e-6
+        params[3] = min_offset + (max_offset-min_offset)*params[3]
+        params[4] = min_offset + (max_offset-min_offset)*params[4]
+
+        # logf
+        minn = -7
+        maxx = -3
+        params[5] =  minn + (maxx-minn)*params[5]
         return params
