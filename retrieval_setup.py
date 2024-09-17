@@ -48,16 +48,18 @@ METALLICITY_CALCULATOR = utils.MetalicityCalculator()
 PLANET_TEQ = planets.TOI562_01.Teq
 
 def log10x_to_mix(log10x):
-        x = 10.0**log10x
-        mix = x/np.sum(x)
-        return mix
+    x = 10.0**log10x
+    mix = x/np.sum(x)
+    return mix
 
 class param_set: 
     """
     This sets up what your free parameters are in each model you want to test
     """
     step_line = 'b1,b2'
+    step_line_logf = 'b1,b2,logf'
     gauss_free_step_line = 'lam0,sig,Amp,cst_nrs1,cst_nrs2'
+    gauss_free_step_line_logf = 'lam0,sig,Amp,cst_nrs1,cst_nrs2,logf'
     mh_cld='logmh,cldp,cst_nrs1,cst_nrs2'
     mh_cld_logf='logmh,cldp,cst_nrs1,cst_nrs2,logf'
     h2oh2_cld='log10xh2,log10xh2o,cldp,cst_nrs1,cst_nrs2'
@@ -75,15 +77,19 @@ class model_set:
         spec[wlgrid>=3.78] = spec[wlgrid>=3.78] + cube[1]
         return spec
     
+    step_line_logf = step_line
+    
     def gauss_free_step_line(cube, data):
         wlgrid = data['wv']
-        lam0, logsig, logAmp, cst_nr1, cst_nr2 = cube 
+        lam0, logsig, logAmp, cst_nr1, cst_nr2 = cube[0], cube[1], cube[2], cube[3], cube[4]
         sig = 10**logsig
         Amp = 10**logAmp
         val = np.empty(wlgrid.shape[0])
         val[wlgrid<3.78] = (Amp*np.exp(-(wlgrid[wlgrid<3.78]-lam0)**2/sig**2)+cst_nr1)
         val[wlgrid>=3.78] = (Amp*np.exp(-(wlgrid[wlgrid>=3.78]-lam0)**2/sig**2)+cst_nr2)
         return val
+    
+    gauss_free_step_line_logf = gauss_free_step_line
     
     def mh_cld(cube, data): 
         log10MH, log_cld_top, cst_nr1, cst_nr2 = cube[0], cube[1], cube[2], cube[3]
@@ -184,11 +190,26 @@ class prior_set:
         minv = -5 #.0001
         maxv = 5 #.005
         params[1] = minv + (maxv-minv)*params[1]
-        return params   
+        return params  
+
+    def step_line_logf(cube):
+        params = cube.copy()
+        minv = -5 #.0001
+        maxv = 5 #.005
+        params[0] = minv + (maxv-minv)*params[0]
+        minv = -5 #.0001
+        maxv = 5 #.005
+        params[1] = minv + (maxv-minv)*params[1]
+
+        # logf
+        minn = -7
+        maxx = -3
+        params[2] =  minn + (maxx-minn)*params[2]   
+        return params  
     
     def gauss_free_step_line(cube):  
         params = cube.copy()
-        lam0, logsig, logAmp, cst_nrs1, cst_nrs2 =params
+        lam0, logsig, logAmp, cst_nrs1, cst_nrs2 = params
         mina =-2
         maxa =1.5 
         logAmp=mina+(maxa-mina)*logAmp
@@ -205,6 +226,33 @@ class prior_set:
         maxv = 5
         cst_nrs2 = minv + (maxv-minv)*cst_nrs2
         params =[lam0, logsig, logAmp,cst_nrs1, cst_nrs2]
+        return params 
+    
+    def gauss_free_step_line_logf(cube):  
+        params = cube.copy()
+        lam0, logsig, logAmp, cst_nrs1, cst_nrs2, logf = params
+        mina =-2
+        maxa =1.5 
+        logAmp=mina+(maxa-mina)*logAmp
+        min_wavelength=3
+        max_wavelength=5.2
+        lam0=min_wavelength+(max_wavelength-min_wavelength)*lam0 
+        min_width = np.log10(0.01)
+        max_width = np.log10(2)
+        logsig=min_width+(max_width-min_width)*logsig
+        minv = -5
+        maxv = 5
+        cst_nrs1 = minv + (maxv-minv)*cst_nrs1
+        minv = -5
+        maxv = 5
+        cst_nrs2 = minv + (maxv-minv)*cst_nrs2
+
+        # logf
+        minn = -7
+        maxx = -3
+        logf =  minn + (maxx-minn)*logf 
+
+        params = [lam0, logsig, logAmp,cst_nrs1, cst_nrs2, logf]
         return params 
 
     def mh_cld(cube):

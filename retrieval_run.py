@@ -37,9 +37,9 @@ import utils
 #2) Define what data you want to test 
 #for running purposes, I just need to change data tag, and POC below. 
 tag = 'TOI562-01'
-data_tag = '30pix'
-POC = 'JA'
-data_file = 'data/TOI562_30pix_JA.csv'
+data_tag = '60pix'
+POC = 'NW'
+data_file = 'data/TOI562_60pix_NW.csv'
 DATA_DICT = utils.get_data_dict(data_file)
 
 #3) Define your likelihood function 
@@ -74,9 +74,9 @@ if not os.path.isdir(out_dir):
 #6) Ultranest kwargs (fairly standard you should not need to change these)
 multi_kwargs = {'resume':True,#'resume-similar',
                 'warmstart_max_tau':-1,#0.7, #only used for resume-similar (small changes in likelihood. 0=very conservative, 1=very negligent) 
-                'n_live_points':'200*nparam',
+                'n_live_points':'100*nparam',
                 'max_ncalls':None,
-                'dlogz': 0.01}
+                'dlogz': 0.5}
        
 ##################### REST SHOULD NOT NEED TO BE EDITED #####################
 for ir, retrieval_type in enumerate(models_types):
