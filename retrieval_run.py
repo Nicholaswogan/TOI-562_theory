@@ -39,7 +39,7 @@ import utils
 tag = 'TOI562-01'
 data_tag = '60pix'
 POC = 'NW'
-data_file = 'data/TOI562_60pix_NW.csv'
+data_file = 'data/TOI562_quadT_spectrum_NW.csv'
 DATA_DICT = utils.get_data_dict(data_file)
 
 #3) Define your likelihood function 
@@ -63,7 +63,7 @@ def loglike(cube):
 
 #4) Specify what model set you are interested in testing (you can run these in a loop if they are very fast or one at a time)
 
-models_types = ['mh_cld_logf']
+models_types = ['mh_cld_logf','h2oh2_cld_logf']
 PHYSICAL_MODEL = True # for unphysical models we normalize the data to compute the log likelihood 
 
 #5) Setup a directory output structure (here I create a new directory for each data provider, and model type)
